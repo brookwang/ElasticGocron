@@ -1,3 +1,12 @@
+# 项目背景
+本项目fork于项目https://github.com/ouqiang/gocron。
+
+#二次开发的目的
+* gocron的调度器仅支持单机部署，有单点风险。本项目将调度器从单点改造为分布式部署，调度器分为master主节点和副本duplicate节点。
+* 主节点负责任务调度，副本节点仅提供备份。
+* 单独的哨兵服务监控主节点服务状态，出现异常情况，下线主节点，选举副本节点为主节点负责任务调度，实现调度器的高可用。
+
+
 # gocron - 定时任务管理系统
 [![Downloads](https://img.shields.io/github/downloads/ouqiang/gocron/total.svg)](https://github.com/ouqiang/gocron/releases)
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)](https://github.com/ouqiang/gocron/blob/master/LICENSE)
@@ -36,9 +45,6 @@
 
 
 ## 下载
-[releases](https://github.com/ouqiang/gocron/releases)  
-
-[版本升级](https://github.com/ouqiang/gocron/wiki/版本升级)
 
 ## 安装
 
@@ -57,25 +63,14 @@
 ### 源码安装
 
 - 安装Go 1.11+
-- `go get -d github.com/ouqiang/gocron`
+- `go get -d github.com/brookwang/ElasticGocron`
 - `export GO111MODULE=on` 
 - 编译 `make`
 - 启动
-    * gocron `./bin/gocron web`
-    * gocron-node `./bin/gocron-node`
-
-
-### docker
-
-```shell
-docker run --name gocron --link mysql:db -p 5920:5920 -d ouqg/gocron
-```
-
-配置: /app/conf/app.ini
-
-日志: /app/log/cron.log
-
-镜像不包含gocron-node, gocron-node需要和具体业务一起构建
+    * 调度器主节点 gocron `./bin/gocron web --role master`
+    * 调度器副本节点 gocron `./bin/gocron web`
+    * 执行器 gocron-node `./bin/gocron-node`
+  
 
 
 ### 开发
@@ -103,9 +98,11 @@ docker run --name gocron --link mysql:db -p 5920:5920 -d ouqg/gocron
 
 * gocron web
     * --host 默认0.0.0.0
+    * --role 指定调度器角色, master|duplicate, master为主节点, duplicate为副本节点，默认duplicate  
     * -p 端口, 指定端口, 默认5920
     * -e 指定运行环境, dev|test|prod, dev模式下可查看更多日志信息, 默认prod
     * -h 查看帮助
+  
 * gocron-node
     * -allow-root *nix平台允许以root用户运行
     * -s ip:port 监听地址  
@@ -133,45 +130,7 @@ docker run --name gocron --link mysql:db -p 5920:5920 -d ouqg/gocron
 * RPC框架 [gRPC](https://github.com/grpc/grpc)
 
 ## 反馈
-提交[issue](https://github.com/ouqiang/gocron/issues/new)
 
 ## ChangeLog
 
-v1.5
---------
-* 前端使用Vue+ElementUI重构
-* 任务通知
-    * 新增WebHook通知
-    * 自定义通知模板
-    * 匹配任务执行结果关键字发送通知
-* 任务列表页显示任务下次执行时间
 
-v1.4
---------
-* HTTP任务支持POST请求
-* 后台手动停止运行中的shell任务
-* 任务执行失败重试间隔时间支持用户自定义
-* 修复API接口调用报403错误
-
-v1.3
---------
-* 支持多用户登录
-* 增加用户权限控制
-
-
-v1.2.2
---------
-* 用户登录页增加图形验证码
-* 支持从旧版本升级
-* 任务批量开启、关闭、删除
-* 调度器与任务节点支持HTTPS双向认证
-* 修复任务列表页总记录数显示错误
-
-v1.1
---------
-
-* 任务可同时在多个节点上运行
-* *nix平台默认禁止以root用户运行任务节点
-* 子任务命令中增加预定义占位符, 子任务可根据主任务运行结果执行相应操作
-* 删除守护进程模块
-* Web访问日志输出到终端
