@@ -63,6 +63,11 @@ func getCommands() []cli.Command {
 				Value: "prod",
 				Usage: "runtime environment, dev|test|prod",
 			},
+			cli.StringFlag{
+				Name:  "role,r",
+				Value: "duplicate",
+				Usage: "runtime role, master|prepare",
+			},
 		},
 	}
 
@@ -72,6 +77,8 @@ func getCommands() []cli.Command {
 func runWeb(ctx *cli.Context) {
 	// 设置运行环境
 	setEnvironment(ctx)
+	// 设置角色
+	setRole(ctx)
 	// 初始化应用
 	app.InitEnv(AppVersion)
 	// 初始化模块 DB、定时任务等
@@ -128,6 +135,17 @@ func parseHost(ctx *cli.Context) string {
 	}
 
 	return "0.0.0.0"
+}
+
+/*
+设置角色
+*/
+func setRole(ctx *cli.Context)  {
+	role := "duplicate"
+	if ctx.IsSet("role") {
+		role = ctx.String("role")
+	}
+	app.Role = role
 }
 
 func setEnvironment(ctx *cli.Context) {

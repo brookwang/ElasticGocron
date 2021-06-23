@@ -148,8 +148,15 @@ func (task Task) RemoveAndAdd(taskModel models.Task) {
 	task.Add(taskModel)
 }
 
-// 添加任务
+//添加任务
+//若请求来自非mater节点，则添加任务失败
+//集群职责：master节点负责读写，其他节点为副本，仅提供容灾职责
 func (task Task) Add(taskModel models.Task) {
+	//非msater节点，不添加任务到本机
+	if !app.IsMasterRole() {
+		logger.Errorf("添加任务失败#不支持任务添加到非master节点-%d", taskModel.Id)
+		return
+	}
 	if taskModel.Level == models.TaskLevelChild {
 		logger.Errorf("添加任务失败#不允许添加子任务到调度器#任务Id-%d", taskModel.Id)
 		return

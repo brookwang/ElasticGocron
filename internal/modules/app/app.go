@@ -32,7 +32,11 @@ var (
 	VersionId int // 版本号
 	// VersionFile 版本文件
 	VersionFile string // 版本号文件
+	// role 角色 master,duplicate
+	Role string
 )
+
+
 
 // InitEnv 初始化
 func InitEnv(versionString string) {
@@ -43,6 +47,7 @@ func InitEnv(versionString string) {
 		logger.Fatal(err)
 	}
 	ConfDir = filepath.Join(AppDir, "/conf")
+	fmt.Println(ConfDir)
 	LogDir = filepath.Join(AppDir, "/log")
 	AppConfig = filepath.Join(ConfDir, "/app.ini")
 	VersionFile = filepath.Join(ConfDir, "/.version")
@@ -60,6 +65,18 @@ func IsInstalled() bool {
 
 	return true
 }
+
+/**
+是否是主节点
+ */
+func IsMasterRole() bool {
+	if Role == "master" {
+		return true
+	}else {
+		return false
+	}
+}
+
 
 // CreateInstallLock 创建安装锁文件
 func CreateInstallLock() error {

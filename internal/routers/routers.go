@@ -170,6 +170,7 @@ func RegisterMiddleware(m *macaron.Macaron) {
 	m.Use(ipAuth)
 	m.Use(userAuth)
 	m.Use(urlAuth)
+	m.Use(roleUriAuth)
 }
 
 // region 自定义中间件
@@ -269,6 +270,31 @@ func urlAuth(ctx *macaron.Context) {
 	data := jsonResp.Failure(utils.UnauthorizedError, "您无权限访问")
 	ctx.Write([]byte(data))
 }
+
+/*
+节点当前所属角色的uri验证
+非master节点不允许POST写操作请求task
+ */
+func roleUriAuth(ctx *macaron.Context)  {
+	isMaster := app.IsMasterRole()
+	//主节点不验证
+	if isMaster {
+		return
+	}
+	//GET不验证
+	uri := strings.TrimRight(ctx.Req.URL.Path, "/")
+	if ctx.Req.Method == "GET" {
+		return
+	}
+	//非task不验证
+	if !strings.HasPrefix(uri, "/task") {
+		return
+	}
+	jsonResp := utils.JsonResponse{}
+	data := jsonResp.Failure(utils.UnauthorizedError, "您无权限访问")
+	ctx.Write([]byte(data))
+}
+
 
 /** API接口签名验证 **/
 func apiAuth(ctx *macaron.Context) {
