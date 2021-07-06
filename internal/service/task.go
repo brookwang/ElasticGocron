@@ -111,7 +111,6 @@ func (task Task) Initialize() {
 	concurrencyQueue = ConcurrencyQueue{queue: make(chan struct{}, app.Setting.ConcurrencyQueue)}
 	taskCount = TaskCount{sync.WaitGroup{}, make(chan struct{})}
 	go taskCount.Wait()
-
 	logger.Info("开始初始化定时任务")
 	taskModel := new(models.Task)
 	taskNum := 0

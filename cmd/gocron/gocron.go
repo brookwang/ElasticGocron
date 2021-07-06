@@ -4,8 +4,11 @@
 package main
 
 import (
+	"github.com/ouqiang/gocron/internal/modules/rpc/server"
+	"github.com/ouqiang/gocron/internal/modules/sentinel"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	macaron "gopkg.in/macaron.v1"
@@ -13,6 +16,7 @@ import (
 	"github.com/ouqiang/gocron/internal/models"
 	"github.com/ouqiang/gocron/internal/modules/app"
 	"github.com/ouqiang/gocron/internal/modules/logger"
+	modules_service "github.com/ouqiang/gocron/internal/modules/service"
 	"github.com/ouqiang/gocron/internal/modules/setting"
 	"github.com/ouqiang/gocron/internal/routers"
 	"github.com/ouqiang/gocron/internal/service"
@@ -27,6 +31,7 @@ var (
 
 // web服务器默认端口
 const DefaultPort = 5920
+
 
 func main() {
 	cliApp := cli.NewApp()
@@ -68,6 +73,11 @@ func getCommands() []cli.Command {
 				Value: "duplicate",
 				Usage: "runtime role, master|prepare",
 			},
+			cli.StringFlag{
+				Name:  "sentinel_port",
+				Value: "",
+				Usage: "bind sentinel rpc prod",
+			},
 		},
 	}
 
@@ -81,8 +91,12 @@ func runWeb(ctx *cli.Context) {
 	setRole(ctx)
 	// 初始化应用
 	app.InitEnv(AppVersion)
+	// 初始化哨兵配置路径
+	sentinel.SetSentinelConfigPath()
 	// 初始化模块 DB、定时任务等
 	initModule()
+	// 初始化rpc端口
+	setRpcPort(ctx)
 	// 捕捉信号,配置热更新等
 	go catchSignal()
 	m := macaron.Classic()
@@ -92,6 +106,10 @@ func runWeb(ctx *cli.Context) {
 	routers.RegisterMiddleware(m)
 	host := parseHost(ctx)
 	port := parsePort(ctx)
+	// 注册服务
+	modules_service.RegisterService(host, port)
+	//启动哨兵的grpc监听
+	go server.StartNoticeRpcServer(host)
 	m.Run(host, port)
 }
 
@@ -125,7 +143,7 @@ func parsePort(ctx *cli.Context) int {
 	if port <= 0 || port >= 65535 {
 		port = DefaultPort
 	}
-
+    app.Port = strconv.Itoa(port)
 	return port
 }
 
@@ -146,6 +164,14 @@ func setRole(ctx *cli.Context)  {
 		role = ctx.String("role")
 	}
 	app.Role = role
+}
+
+func setRpcPort(ctx *cli.Context)  {
+	if ctx.IsSet("sentinel_port") {
+        sentinel.RpcPort = ctx.String("sentinel_port")
+	}else {
+		sentinel.RpcPort = sentinel.GetDefaultRpcPort()
+	}
 }
 
 func setEnvironment(ctx *cli.Context) {
@@ -215,3 +241,5 @@ func upgradeIfNeed() {
 
 	logger.Infof("已升级到最新版本%d", app.VersionId)
 }
+
+

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package rpc;
+
+option go_package = "./;rpc";   //新增该行
+
+service UpdateConfig {
+    rpc Run(ConfigRequest) returns (ConfigResponse) {}
+}
+
+message ConfigRequest {
+    string ip = 1; // 参数
+    string command = 2; // 命令
+}
+
+message ConfigResponse {
+    string res = 1; // 0成功
+}

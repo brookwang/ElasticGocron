@@ -4,8 +4,10 @@ import (
 	"crypto/md5"
 	crand "crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/rand"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -105,4 +107,82 @@ func FileExist(file string) bool {
 	}
 
 	return true
+}
+
+/**
+通过地址得到ip和端口
+*/
+func GetIPAndPortByAddress(address string) (string, string) {
+	if address == "" {
+		return "", ""
+	}
+	addArr := strings.Split(address, ":")
+	return addArr[0], addArr[1]
+}
+
+//2个切片的差集
+func SliceDiff(s1 []string, s2 []string) []string {
+	s := make([]string, 0)
+	for _, v1 := range s1 {
+		if !InArray(s2, v1) {
+			s = append(s, v1)
+		}
+	}
+	return s
+}
+
+//判断切片中是否存在某个元素
+func InArray(s1 []string, val string) bool {
+	for _, v := range s1 {
+		if v == val {
+			return true
+		}
+	}
+	return false
+}
+
+func ExternalIP() (net.IP, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 {
+			continue // interface down
+		}
+		if iface.Flags&net.FlagLoopback != 0 {
+			continue // loopback interface
+		}
+		addrs, err := iface.Addrs()
+		if err != nil {
+			return nil, err
+		}
+		for _, addr := range addrs {
+			ip := getIpFromAddr(addr)
+			if ip == nil {
+				continue
+			}
+			return ip, nil
+		}
+	}
+	return nil, errors.New("connected to the network?")
+}
+
+func getIpFromAddr(addr net.Addr) net.IP {
+	var ip net.IP
+	switch v := addr.(type) {
+	case *net.IPNet:
+		ip = v.IP
+	case *net.IPAddr:
+		ip = v.IP
+	}
+	if ip == nil || ip.IsLoopback() {
+		return nil
+	}
+	ip = ip.To4()
+	if ip == nil {
+		return nil // not an ipv4 address
+	}
+
+	return ip
 }

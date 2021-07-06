@@ -3,6 +3,8 @@ package client
 import (
 	"errors"
 	"fmt"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 	"sync"
 	"time"
 
@@ -19,8 +21,19 @@ var (
 	taskMap sync.Map
 )
 
+const backOffMaxDelay = 3 * time.Second
+
+
 var (
 	errUnavailable = errors.New("无法连接远程服务器")
+)
+
+var (
+	keepAliveParams = keepalive.ClientParameters{
+		Time:                20 * time.Second,
+		Timeout:             3 * time.Second,
+		PermitWithoutStream: true,
+	}
 )
 
 func generateTaskUniqueKey(ip string, port int, id int64) string {
@@ -69,6 +82,63 @@ func Exec(ip string, port int, taskReq *pb.TaskRequest) (string, error) {
 
 	return resp.Output, errors.New(resp.Error)
 }
+
+
+/*
+哨兵服务rpc通知
+ */
+func NoticeExec(ip string, port string, noticeRequest *pb.NoticeRequest) (string, error) {
+	address := ip + ":" + port
+	opts := []grpc.DialOption{
+		grpc.WithKeepaliveParams(keepAliveParams),
+		grpc.WithBackoffMaxDelay(backOffMaxDelay),
+		grpc.WithInsecure(),
+		//该参数保证连接重置
+		grpc.WithBlock(),
+	}
+	timeout := time.Duration(3) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	conn, err := grpc.DialContext(ctx, address, opts...)
+	if err != nil {
+		return "", err
+	}
+	defer conn.Close()
+    c := pb.NewNoticeClient(conn)
+    r, err := c.Run(context.Background(), noticeRequest)
+	if err != nil {
+		return "", err
+	}
+	return r.Output, nil
+}
+
+
+/*
+哨兵服务的修改配置rpc通知
+*/
+func UpdateConfigExec(ip string, port string, configRequest *pb.ConfigRequest) (string, error) {
+	address := ip + ":" + port
+	opts := []grpc.DialOption{
+		grpc.WithKeepaliveParams(keepAliveParams),
+		grpc.WithBackoffMaxDelay(backOffMaxDelay),
+		grpc.WithInsecure(),
+	}
+	timeout := time.Duration(3) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	conn, err := grpc.DialContext(ctx, address, opts...)
+	if err != nil {
+		return "", err
+	}
+	defer conn.Close()
+	c := pb.NewUpdateConfigClient(conn)
+	r, err := c.Run(context.Background(), configRequest)
+	if err != nil {
+		return "", err
+	}
+	return r.Res, nil
+}
+
 
 func parseGRPCError(err error) (string, error) {
 	switch status.Code(err) {

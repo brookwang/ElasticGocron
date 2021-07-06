@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package rpc;
+
+option go_package = "./;rpc";   //新增该行
+
+service Notice {
+    rpc Run(NoticeRequest) returns (NoticeResponse) {}
+}
+
+message NoticeRequest {
+    string command = 1; // 命令
+}
+
+message NoticeResponse {
+    string output = 1; // 命令标准输出
+    string error = 2;  // 命令错误
+}

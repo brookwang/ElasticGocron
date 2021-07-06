@@ -1,6 +1,9 @@
 package utils
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestRandString(t *testing.T) {
 	str := RandString(32)
@@ -21,4 +24,9 @@ func TestRandNumber(t *testing.T) {
 	if num <= 0 && num >= 10000 {
 		t.Fatalf("随机数不在有效范围内-%d", num)
 	}
+}
+
+func TestExternalIP(t *testing.T) {
+	res, _ := ExternalIP()
+	fmt.Println(res)
 }
